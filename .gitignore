@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data and results
+data/*.csv
+data/*.png
+*.xlsx
+
+# System
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Tests
+.pytest_cache/
