@@ -18,10 +18,8 @@ build/
 *.swo
 *~
 
-# Data and results
-data/*.csv
-data/*.png
-*.xlsx
+# System files
+.DS_Store
 
 # System
 .DS_Store
