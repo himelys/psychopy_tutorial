@@ -25,12 +25,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 기본 실험 실행
-
-```bash
-python experiments/basic_sound_experiment.py
-```
-
 ---
 
 ## 프로젝트 구조
