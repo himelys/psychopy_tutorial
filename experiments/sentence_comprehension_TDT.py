@@ -728,33 +728,35 @@ class SentenceComprehensionExperimentTDT:
         # Calculate number of trials
         num_trials = len(self.audio_files) // 2
         
-        # Run trials
-        trial_count = 0
-        for trial_num in range(1, num_trials + 1):
-            success = self.run_trial(trial_num, num_trials)
-            if success:
-                trial_count += 1
-            else:
-                break
-        
-        # Save data
-        self.save_data(subject_id, session)
-        
-        # Show completion message
-        self.show_message(
-            f"✓ 실험 완료!\n총 {trial_count}/{num_trials} 시행 완료",
-            color=[0, 1, 0],
-            duration=2
-        )
-        
-        # Plot results
-        self.plot_results()
-        
-        # Close TDT connection
-        if self.tdt_manager is not None:
-            self.tdt_manager.close()
-        
-        self.window.close()
+        try:
+            # Run trials
+            trial_count = 0
+            for trial_num in range(1, num_trials + 1):
+                success = self.run_trial(trial_num, num_trials)
+                if success:
+                    trial_count += 1
+                    # Save data after every trial to prevent data loss
+                    self.save_data(subject_id, session)
+                else:
+                    break
+            
+            # Show completion message
+            self.show_message(
+                f"✓ 실험 완료!\n총 {trial_count}/{num_trials} 시행 완료",
+                color=[0, 1, 0],
+                duration=2
+            )
+            
+            # Plot results
+            self.plot_results()
+            
+        finally:
+            # Close TDT connection and Window safely
+            if self.tdt_manager is not None:
+                self.tdt_manager.close()
+            
+            if self.window is not None:
+                self.window.close()
     
     def save_data(self, subject_id, session):
         """Save experimental data to CSV."""
@@ -835,8 +837,6 @@ class SentenceComprehensionExperimentTDT:
         filename = os.path.join(self.data_dir, f"sentence_comprehension_TDT_{timestamp}.png")
         plt.savefig(filename, dpi=150, bbox_inches='tight')
         print(f"✓ Results saved: {filename}")
-        
-        plt.show()
 
 
 if __name__ == '__main__':

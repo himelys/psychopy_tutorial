@@ -417,29 +417,31 @@ class SentenceComprehensionExperiment:
         # Calculate number of trials
         num_trials = len(self.audio_files) // 2
         
-        # Run trials
-        trial_count = 0
-        for trial_num in range(1, num_trials + 1):
-            success = self.run_trial(trial_num, num_trials)
-            if success:
-                trial_count += 1
-            else:
-                break
-        
-        # Save data
-        self.save_data(subject_id, session)
-        
-        # Show completion message
-        self.show_message(
-            f"✓ 실험 완료!\n총 {trial_count}/{num_trials} 시행 완료",
-            color=[0, 1, 0],
-            duration=2
-        )
-        
-        # Plot results
-        self.plot_results()
-        
-        self.window.close()
+        try:
+            # Run trials
+            trial_count = 0
+            for trial_num in range(1, num_trials + 1):
+                success = self.run_trial(trial_num, num_trials)
+                if success:
+                    trial_count += 1
+                    # Save data after every trial to prevent data loss
+                    self.save_data(subject_id, session)
+                else:
+                    break
+            
+            # Show completion message
+            self.show_message(
+                f"✓ 실험 완료!\n총 {trial_count}/{num_trials} 시행 완료",
+                color=[0, 1, 0],
+                duration=2
+            )
+            
+            # Plot results
+            self.plot_results()
+            
+        finally:
+            # Ensure window is closed even if an error occurs
+            self.window.close()
     
     def save_data(self, subject_id, session):
         """Save experimental data to CSV."""
@@ -520,8 +522,6 @@ class SentenceComprehensionExperiment:
         filename = os.path.join(self.data_dir, f"sentence_comprehension_{timestamp}.png")
         plt.savefig(filename, dpi=150, bbox_inches='tight')
         print(f"✓ Results saved: {filename}")
-        
-        plt.show()
 
 
 if __name__ == '__main__':
