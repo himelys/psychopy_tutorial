@@ -28,8 +28,7 @@ Python 기반 PsychoPy 플랫폼을 사용한 청각 심리물리 실험 프로�
 | **sounddevice** | 0.5.5+ | 오디오 재생 |
 | **soundfile** | 0.12.1+ | 음성 파일 I/O |
 | **openpyxl** | 3.0.0+ | 엑셀 파일 처리 (quiz.xlsx, trg_table.xlsx) |
-| **pysynapse** | 0.0.3+ | TDT Synapse 통합 (옵션) ⚙️ |
-| **validators** | 0.28.3+ | pysynapse 의존성 |
+| **tdt** | 최신 버전 | TDT Synapse 통합 (옵션) ⚙️ |
 
 **추가 요구사항 (TDT 통합 버전):**
 - TDT RZ5 또는 RZ6 프로세서
@@ -51,7 +50,7 @@ source .venv/bin/activate        # macOS/Linux
 ### 2. 필요한 패키지 설치
 
 ```bash
-pip install psychopy scipy pandas matplotlib sounddevice soundfile openpyxl pysynapse
+pip install psychopy scipy pandas matplotlib sounddevice soundfile openpyxl tdt
 ```
 
 ### 3. 실험 실행
@@ -105,10 +104,6 @@ Sen_03.wav       | 3
 ...              | ...
 ```
 
-**TDT 미설치 시:**
-- pysynapse 미설치 → TDT 기능 비활성화, 일반 모드 실행
-- Synapse 미실행 → 경고 메시지 표시, 트리거 신호 없이 실행
-- **기본 실험은 정상 작동함**
 
 
 ---
@@ -225,5 +220,3 @@ pip install psychopy scipy pandas matplotlib
 
 **버전**: 2.0 | **Python**: 3.11+ | **PsychoPy**: 2025.2.4+  
 **상태**: ✅ 완성 및 테스트 완료
-
-

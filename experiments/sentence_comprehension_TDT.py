@@ -8,7 +8,7 @@ answer a comprehension question about the right-side audio.
 Trigger signals are sent to TDT (Tucker-Davis Technologies) system during audio playback.
 
 Requirements:
-- pysynapse (TDT package): pip install pysynapse
+- tdt (TDT package): pip install tdt
 - TDT RZ5 or RZ6 system with RPCo enabled
 """
 
@@ -42,45 +42,46 @@ import warnings
 warnings.filterwarnings('ignore')
 logging.console.setLevel(logging.WARNING)
 
-# Try to import pysynapse for TDT integration
+# Try to import tdt for TDT integration
 TDT_AVAILABLE = False
 SYNAPSE = None
 
 try:
-    import pysynapse
+    import tdt
     TDT_AVAILABLE = True
-    print("✓ pysynapse module found - TDT integration enabled")
+    print("✓ tdt module found - TDT integration enabled")
 except ImportError:
-    print("⚠ pysynapse module not found - TDT integration disabled")
-    print("  Install with: pip install pysynapse")
+    print("⚠ tdt module not found - TDT integration disabled")
+    print("  Install with: pip install tdt")
 
 
 class TDTSynapseManager:
-    """Manages communication with TDT Synapse via pysynapse."""
+    """Manages communication with TDT Synapse via tdt package (SynapseAPI)."""
     
-    def __init__(self, ip='localhost', port=3333):
+    def __init__(self, gizmo_name='Experiment'):
         """Initialize TDT Synapse connection."""
-        self.ip = ip
-        self.port = port
         self.synapse = None
         self.connected = False
-        self.trigger_variable = 'AudioTrigger'  # Default trigger variable name
+        # Synapse requires GizmoName and ParameterName
+        self.gizmo_name = gizmo_name
+        self.parameter_name = 'AudioTrigger'
         
         self._connect()
     
     def _connect(self):
-        """Connect to Synapse RPC server."""
+        """Connect to Synapse API."""
         if not TDT_AVAILABLE:
-            print("⚠ TDT connection not available (pysynapse not installed)")
+            print("⚠ TDT connection not available (tdt package not installed)")
             return
         
         try:
-            self.synapse = pysynapse.Synapse(ip=self.ip, port=self.port)
+            # Connect to local Synapse API
+            self.synapse = tdt.SynapseAPI()
             self.connected = True
-            print(f"✓ Connected to Synapse at {self.ip}:{self.port}")
+            print(f"✓ Connected to TDT Synapse API")
         except Exception as e:
-            print(f"⚠ Failed to connect to Synapse: {e}")
-            print(f"  Make sure Synapse is running on {self.ip}:{self.port}")
+            print(f"⚠ Failed to connect to TDT Synapse API: {e}")
+            print(f"  Make sure Synapse application is running.")
             self.connected = False
     
     def send_trigger(self, trigger_value):
@@ -93,8 +94,9 @@ class TDTSynapseManager:
             return False
         
         try:
-            self.synapse.setVar(self.trigger_variable, int(trigger_value))
-            print(f"✓ Trigger sent: {self.trigger_variable} = {trigger_value}")
+            # Use setParameterValue(Gizmo, Parameter, Value)
+            self.synapse.setParameterValue(self.gizmo_name, self.parameter_name, int(trigger_value))
+            print(f"✓ Trigger sent: {self.gizmo_name}.{self.parameter_name} = {trigger_value}")
             return True
         except Exception as e:
             print(f"⚠ Failed to send trigger: {e}")
@@ -179,16 +181,10 @@ class SentenceComprehensionExperimentTDT:
         
         # Initialize TDT connection if requested
         if self.use_tdt and TDT_AVAILABLE:
-            self.tdt_manager = TDTSynapseManager(ip=self.tdt_ip, port=self.tdt_port)
+            self.tdt_manager = TDTSynapseManager()
         elif self.use_tdt and not TDT_AVAILABLE:
             self.show_message(
-                "⚠ TDT requested but pysynapse not available\nContinuing without TDT",
-                color=[1, 1, 0],
-                duration=3
-            )
-        elif use_tdt and not TDT_AVAILABLE:
-            self.show_message(
-                "⚠ TDT requested but pysynapse not available\nContinuing without TDT",
+                "⚠ TDT requested but tdt package not available\nContinuing without TDT",
                 color=[1, 1, 0],
                 duration=3
             )
@@ -842,13 +838,9 @@ class SentenceComprehensionExperimentTDT:
 if __name__ == '__main__':
     # Run experiment with TDT integration
     # Parameters:
-    #   use_tdt: Enable TDT trigger signals (default: True)
-    #   tdt_ip: IP address of TDT RPC server (default: 'localhost')
-    #   tdt_port: Port of TDT RPC server (default: 3333)
+    #   use_tdt: Enable TDT trigger signals (default: True) 
     
     exp = SentenceComprehensionExperimentTDT(
-        use_tdt=True,           # Set to False to disable TDT
-        tdt_ip='localhost',     # Change if TDT is running on different machine
-        tdt_port=3333           # Default Synapse RPC port
+        use_tdt=True           # Set to False to disable TDT
     )
     exp.run()

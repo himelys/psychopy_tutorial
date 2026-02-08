@@ -68,7 +68,7 @@ psychopy_program/
 **1단계: TDT 관련 패키지 설치**
 ```bash
 source .venv/bin/activate
-pip install -r requirements.txt  # pysynapse 포함
+pip install -r requirements.txt  # tdt 포함
 ```
 
 **2단계: TDT 하드웨어 및 소프트웨어 설정**

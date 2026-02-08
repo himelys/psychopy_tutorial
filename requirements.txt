@@ -5,5 +5,5 @@ matplotlib>=3.7.0
 pandas>=2.0.0
 soundfile>=0.12.1
 sounddevice>=0.4.5
-pysynapse>=0.0.3
+tdt
 openpyxl>=3.0.0
