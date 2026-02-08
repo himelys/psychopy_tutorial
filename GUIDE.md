@@ -89,13 +89,13 @@ pip install -r requirements.txt  # pysynapse 포함
 ```
 filename          | trigger val
 -----------------|-------------
-Sen_01.wav       | 10
-Sen_02.wav       | 20
-Sen_03.wav       | 30
-Sen_04.wav       | 40
+Sen_01.wav       | 1
+Sen_02.wav       | 2
+Sen_03.wav       | 3
+Sen_04.wav       | 4
 ```
 
-파일 위치: `/Users/yoonseoblim/Documents/Python_Program/psychopy_program/trg_table.xlsx`
+파일 위치: `../psychopy_tutorial/trg_table.xlsx`
 
 ### 실행 방법
 
@@ -138,111 +138,6 @@ if manager.is_connected():
 - Synapse 미실행 → 경고 후 트리거 없이 실험 진행
 - **기본 실험은 정상 작동**
 
-### 모니터 해상도 자동 감지
-
-실험 시작 시 자동으로 모니터 해상도를 감지합니다:
-
-**감지 순서 (Fallback):**
-```
-1. pyglet 라이브러리
-   ↓ (실패 시)
-2. screeninfo 라이브러리
-   ↓ (실패 시)
-3. macOS Quartz (macOS 전용)
-   ↓ (실패 시)
-4. 기본값: 1920x1080
-```
-
-**콘솔 출력 예시:**
-```
-Using pyglet backend
-Detected screen resolution: 2560x1440
-Scale factor: 1.20x (window will scale to 120% of reference size)
-```
-
-### 동적 UI 스케일링
-
-모든 UI 요소가 감지된 해상도에 맞게 자동으로 스케일링됩니다:
-
-**기준 해상도: 1920x1080**
-- 텍스트 높이: `35 * scale`
-- 십자가 크기: `17 * scale`
-- Y 위치: `y * scale_y`
-- 텍스트 줄바꿈 너비: `screen_width * 90%`
-
-**예시:**
-```
-감지 해상도: 2560x1440
-기준 해상도: 1920x1080
-Scale: min(2560/1920, 1440/1080) = 1.20
-
-텍스트 높이: 35 * 1.20 = 42
-십자가 크기: 17 * 1.20 = 20
-```
-
-### Fixation Crosshair
-
-오디오 재생 중 시각적 주의 집중을 위해 십자가 마크가 표시됩니다:
-
-**외형:**
-- 배경: 회색 (0.3, 0.3, 0.3) 또는 검은색
-- 십자가: 흰색 (1, 1, 1)
-- 구성: 수평선 + 수직선 + 중심점
-- 크기: 동적 스케일링 적용 (기본 17px)
-
-**코드:**
-```python
-# 십자가 크기 커스터마이징
-crosshair_size = int(30 * scale)  # 17에서 30으로 변경
-```
-
-### 참가자 정보 수집 Flow
-
-새로운 최적화된 플로우:
-
-**이전 (Traditional):**
-```
-윈도우 생성 → 참가자 정보 입력 (블로킹) → 실험 시작
-```
-
-**현재 (Optimized):**
-```
-콘솔에서 참가자 정보 입력 (빠름) → 윈도우 생성 → 실험 시작
-```
-
-**장점:**
-- PsychoPy 윈도우가 미리 열리지 않음 (부자연스러움 제거)
-- 참가자 정보 입력이 터미널에서 진행 (더 빠름)
-- 윈도우가 준비되면 실험 화면 즉시 표시
-
-### 문제 해결
-
-**Q: TDT 연결 안 됨**
-```
-A: Synapse 소프트웨어가 실행 중인지 확인
-   host='localhost', port=3333 설정 확인
-   콘솔에 "TDT 연결 실패" 메시지 출력 → 일반 모드로 진행
-```
-
-**Q: 모니터 해상도 잘못 감지됨**
-```
-A: 콘솔에 감지된 해상도 확인
-   필요시 코드에서 수동으로 설정:
-   self.screen_width = 2560
-   self.screen_height = 1440
-```
-
-**Q: 십자가가 너무 크거나 작음**
-```
-A: experiments/sentence_comprehension_TDT.py에서
-   crosshair_size = int(17 * self.scale)  # 17을 다른 값으로 변경
-```
-
-**Q: pysynapse 설치 안 됨**
-```
-A: pip install --upgrade pysynapse>=0.0.3
-   또는 TDT 기능 없이 실험 진행 (자동으로 폴백)
-```
 
 ### 데이터 출력
 
@@ -458,7 +353,6 @@ if latency_sec > max_time:
 
 **기본 실행**
 ```bash
-cd /Users/yoonseoblim/Documents/Python_Program/psychopy_program
 source .venv/bin/activate
 python experiments/sentence_comprehension.py
 ```

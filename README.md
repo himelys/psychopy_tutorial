@@ -40,16 +40,16 @@ Python 기반 PsychoPy 플랫폼을 사용한 청각 심리물리 실험 프로�
 
 ## 🚀 설치 및 실행
 
-### 1. 가상환경 활성화 (이미 설정됨)
+### 1. 가상환경 활성화
 ```bash
-cd psychopy_program
+cd psychopy_tutorial
 source .venv/bin/activate        # macOS/Linux
 # 또는
 .\.venv\Scripts\activate         # Windows
 ```
 
 ### 2. 필요한 패키지 설치
-모든 패키지가 이미 설치되어 있습니다. 필요시:
+
 ```bash
 pip install psychopy scipy pandas matplotlib sounddevice soundfile openpyxl pysynapse
 ```
@@ -99,9 +99,9 @@ python experiments/sentence_comprehension_TDT.py
 ```
 filename          | trigger val
 -----------------|-------------
-Sen_01.wav       | 10
-Sen_02.wav       | 20
-Sen_03.wav       | 30
+Sen_01.wav       | 1
+Sen_02.wav       | 2
+Sen_03.wav       | 3
 ...              | ...
 ```
 
@@ -110,15 +110,6 @@ Sen_03.wav       | 30
 - Synapse 미실행 → 경고 메시지 표시, 트리거 신호 없이 실행
 - **기본 실험은 정상 작동함**
 
-### 4️⃣ 문장 음성 이해 실험 - TDT 통합 버전 (Sentence Comprehension + TDT Synapse) ⚙️
-- 3️⃣ 기본 실험에 **TDT(Tucker-Davis Technologies)** 시스템 통합
-- **pysynapse**를 통한 Synapse RPC 자동 연동
-- 오디오 재생 시 동기화된 **트리거 신호** 자동 전송
-- 각 오디오 파일별 **고유한 트리거값** (`trg_table.xlsx`에서 로드)
-- **동적 모니터 해상도 감지** 및 UI 자동 스케일링
-- 참가자 정보 입력 후 PsychoPy 화면 초기화 (최적화된 플로우)
-- **Fixation crosshair** 표시로 시각적 주의 집중 유지
-- 모든 데이터 수집 및 그래프 생성은 기본 버전과 동일
 
 ---
 
