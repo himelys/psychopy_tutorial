@@ -4,17 +4,7 @@ Python 기반 PsychoPy 플랫폼을 사용한 청각 심리물리 실험 프로�
 
 ## 📌 프로젝트 개요
 
-이 프로젝트는 세 가지 청각 실험을 제공합니다:
-
-### 1️⃣ 음향 감지 실험 (Sound Detection Experiment)
-- 다양한 주파수의 음향 자극을 제시하고 피험자의 감지 반응 측정
-- 반응 시간 및 감지율 기록
-- 주파수별 성능 분석 및 그래프 생성
-
-### 2️⃣ 음향 판별 실험 (Sound Discrimination Experiment)
-- 기준음과 비교음을 제시하여 주파수 판별 능력 측정
-- 상향식 방법(Ascending Method)으로 감각역치 추정
-- 역전(Reversal) 감지 및 자동 종료
+이 프로젝트는 아래와 같은 청각 실험을 제공합니다:
 
 ### 3️⃣ 문장 음성 이해 실험 (Sentence Comprehension Experiment)
 - 좌우 스피커에서 서로 다른 문장 음원을 동시에 제시 (공간 음향)
@@ -27,15 +17,24 @@ Python 기반 PsychoPy 플랫폼을 사용한 청각 심리물리 실험 프로�
 
 ## 🔧 요구사항
 
-| 항목 | 버전 |
-|------|------|
-| **Python** | 3.11 (PsychoPy 호환성: 3.8-3.11) |
-| **PsychoPy** | 2025.2.4+ |
-| **NumPy** | 2.2+ |
-| **SciPy** | 1.14+ |
-| **Pandas** | 3.0+ |
-| **Matplotlib** | 3.10+ |
-| **sounddevice** | 0.5.5+ |
+| 항목 | 버전 | 비고 |
+|------|------|------|
+| **Python** | 3.11 | PsychoPy 호환성: 3.8-3.11 |
+| **PsychoPy** | 2025.2.4+ | 자극 및 실험 제시 |
+| **NumPy** | 2.2+ | 신호 처리 |
+| **SciPy** | 1.14+ | 신호 처리, 재샘플링 |
+| **Pandas** | 3.0+ | 데이터 분석 |
+| **Matplotlib** | 3.10+ | 결과 시각화 |
+| **sounddevice** | 0.5.5+ | 오디오 재생 |
+| **soundfile** | 0.12.1+ | 음성 파일 I/O |
+| **openpyxl** | 3.0.0+ | 엑셀 파일 처리 (quiz.xlsx, trg_table.xlsx) |
+| **pysynapse** | 0.0.3+ | TDT Synapse 통합 (옵션) ⚙️ |
+| **validators** | 0.28.3+ | pysynapse 의존성 |
+
+**추가 요구사항 (TDT 통합 버전):**
+- TDT RZ5 또는 RZ6 프로세서
+- Synapse 소프트웨어 (RPC 서버 활성화)
+- `trg_table.xlsx` 파일
 
 ---
 
@@ -52,34 +51,10 @@ source .venv/bin/activate        # macOS/Linux
 ### 2. 필요한 패키지 설치
 모든 패키지가 이미 설치되어 있습니다. 필요시:
 ```bash
-pip install psychopy scipy pandas matplotlib sounddevice
+pip install psychopy scipy pandas matplotlib sounddevice soundfile openpyxl pysynapse
 ```
 
 ### 3. 실험 실행
-
-#### ✨ 음향 감지 실험 (Detection Experiment)
-```bash
-python experiments/basic_sound_experiment.py
-```
-
-**실험 절차:**
-1. 피험자 정보 입력 (GUI 대화상자)
-2. 지시문 읽기
-3. 각 시행: 주파수 440Hz, 660Hz, 880Hz (각 3회 반복, 총 9 시행)
-4. 음향 감지 시 스페이스 바 누르기
-5. 반응시간 기록 및 완료
-
-#### 🎯 음향 판별 실험 (Discrimination Experiment)
-```bash
-python experiments/sound_discrimination.py
-```
-
-**실험 절차:**
-1. 피험자 정보 입력 (기준음, 시작 주파수 등)
-2. 지시문 읽기
-3. 각 시행: 기준음 → ISI(300ms) → 비교음
-4. 비교음이 기준음보다 높은지/낮은지/같은지 판단
-5. 역전 4회 달성 후 자동 종료
 
 #### 📝 문장 음성 이해 실험 (Sentence Comprehension Experiment)
 ```bash
@@ -102,6 +77,49 @@ python experiments/sentence_comprehension.py
 - 정/오 정보 저장
 - 4개 그래프 자동 생성
 
+#### 📝 문장 음성 이해 실험 - TDT 통합 버전 (Sentence Comprehension + TDT Synapse) ⚙️
+```bash
+python experiments/sentence_comprehension_TDT.py
+```
+
+**TDT 통합 버전의 주요 기능:**
+
+| 기능 | 설명 |
+|------|------|
+| **TDT Synapse 연동** | Synapse RPC 자동 연결 (localhost:3333) |
+| **트리거 신호** | 오디오 시작/종료 시 동기화된 트리거 전송 |
+| **동적 트리거값** | `trg_table.xlsx`에서 오디오별 트리거값 로드 |
+| **모니터 자동 감지** | 해상도 자동 감지 (pyglet → screeninfo → Quartz) |
+| **UI 동적 스케일링** | 모든 UI 요소가 모니터 해상도에 맞게 자동 조정 |
+| **최적화된 플로우** | 참가자 정보 → 윈도우 초기화 (순차 실행) |
+| **Fixation Crosshair** | 시각적 주의 집중용 십자가 마크 표시 |
+| **풀스크린 모드** | 100% 전체 화면 사용 |
+
+**필수 파일 (`trg_table.xlsx` 예제):**
+```
+filename          | trigger val
+-----------------|-------------
+Sen_01.wav       | 10
+Sen_02.wav       | 20
+Sen_03.wav       | 30
+...              | ...
+```
+
+**TDT 미설치 시:**
+- pysynapse 미설치 → TDT 기능 비활성화, 일반 모드 실행
+- Synapse 미실행 → 경고 메시지 표시, 트리거 신호 없이 실행
+- **기본 실험은 정상 작동함**
+
+### 4️⃣ 문장 음성 이해 실험 - TDT 통합 버전 (Sentence Comprehension + TDT Synapse) ⚙️
+- 3️⃣ 기본 실험에 **TDT(Tucker-Davis Technologies)** 시스템 통합
+- **pysynapse**를 통한 Synapse RPC 자동 연동
+- 오디오 재생 시 동기화된 **트리거 신호** 자동 전송
+- 각 오디오 파일별 **고유한 트리거값** (`trg_table.xlsx`에서 로드)
+- **동적 모니터 해상도 감지** 및 UI 자동 스케일링
+- 참가자 정보 입력 후 PsychoPy 화면 초기화 (최적화된 플로우)
+- **Fixation crosshair** 표시로 시각적 주의 집중 유지
+- 모든 데이터 수집 및 그래프 생성은 기본 버전과 동일
+
 ---
 
 ## 📁 폴더 구조
@@ -110,9 +128,8 @@ python experiments/sentence_comprehension.py
 psychopy_program/
 │
 ├── experiments/                              # 🔬 실험 프로그램
-│   ├── basic_sound_experiment.py            # 음향 감지 실험
-│   ├── sound_discrimination.py              # 음향 판별 실험
 │   ├── sentence_comprehension.py            # 문장 음성 이해 실험
+│   ├── sentence_comprehension_TDT.py        # 문장 음성 이해 + TDT 통합 ⚙️
 │   └── sound_utilities.py                   # 음향 유틸리티
 │
 ├── data/                                     # 📊 실험 결과
@@ -125,6 +142,7 @@ psychopy_program/
 ├── README.md                                 # 📖 이 파일
 ├── COMPLETION_REPORT.md                      # ✅ 완성 보고서
 ├── GUIDE.md                                  # 📚 상세 가이드
+├── trg_table.xlsx                            # TDT 트리거값 매핑 ⚙️
 ├── quiz.xlsx                                 # 📋 퀴즈 데이터
 └── requirements.txt                          # 📋 의존성
 ```
@@ -134,12 +152,6 @@ psychopy_program/
 ## 📊 실험 결과
 
 각 실험 후 `data/` 폴더에 자동으로 저장됩니다:
-
-### 음향 감지/판별 실험
-- `{Subject_ID}_session{N}_{timestamp}.csv` - 감지 실험 데이터
-- `{Subject_ID}_discrimination_{timestamp}.csv` - 판별 실험 데이터
-- `{Subject_ID}_detection_{timestamp}.png` - 감지 실험 결과 그래프
-- `{Subject_ID}_discrimination_{timestamp}.png` - 판별 실험 결과 그래프
 
 ### 문장 음성 이해 실험
 - `{Subject_ID}_session{N}_{timestamp}.csv` - 각 시행의 정답/오답/반응시간 데이터
@@ -158,23 +170,6 @@ psychopy_program/
 ---
 
 ## 🎮 사용 예시
-
-### 감지 실험 데이터 분석
-```python
-import pandas as pd
-
-df = pd.read_csv('data/S001_detection_20250207_123456.csv')
-print("주파수별 감지율:")
-print(df.groupby('frequency')['response_detected'].mean())
-```
-
-### 판별 실험 데이터 분석
-```python
-import pandas as pd
-
-df = pd.read_csv('data/S001_discrimination_20250207_123456.csv')
-print("추정 역치:", df['test_freq'].iloc[-4:].mean())
-```
 
 ### 문장 음성 이해 실험 데이터 분석
 ```python

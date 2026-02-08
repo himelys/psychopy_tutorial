@@ -6,11 +6,10 @@ PsychoPy를 사용하여 청각 심리 실험을 구축하기 위한 완벽한 �
 
 1. [설치 및 시작](#설치-및-시작)
 2. [프로젝트 구조](#프로젝트-구조)
-3. [기본 실험 프로그램](#기본-실험-프로그램)
-4. [고급 실험](#고급-실험)
-5. [유틸리티 사용법](#유틸리티-사용법)
-6. [데이터 분석](#데이터-분석)
-7. [트러블슈팅](#트러블슈팅)
+3. [TDT Synapse 통합 버전](#tdt-synapse-통합-버전-⚙️) ⚙️
+4. [문장 음성 이해 실험](#문장-음성-이해-실험-sentence-comprehension-experiment)
+5. [데이터 분석](#데이터-분석)
+6. [트러블슈팅](#트러블슈팅)
 
 ---
 
@@ -39,238 +38,234 @@ python experiments/basic_sound_experiment.py
 ```
 psychopy_program/
 ├── experiments/
-│   ├── basic_sound_experiment.py  # 기본 음향 detection 실험
-│   ├── sound_discrimination.py    # 상향식 방법으로 역치 추정 실험
-│   └── sound_utilities.py         # 음향 자극 생성 및 분석 유틸리티
+│   ├── sentence_comprehension.py  # 문장 음성 이해 실험
+│   ├── sentence_comprehension_TDT.py  # 문장 음성 이해 + TDT 통합
 ├── data/                          # 실험 결과 CSV 파일 저장
 ├── stimuli/                       # 음성 파일 저장 디렉토리
 ├── .venv/                         # Python 3.11 가상환경
 ├── README.md                      # 프로젝트 설명
 ├── GUIDE.md                       # 이 파일
+├── quiz.xlsx                      # 퀴즈 데이터
+├── trg_table.xlsx                 # TDT 트리거값 매핑
 └── requirements.txt               # Python 의존성
 ```
 
 ---
 
-## 기본 실험 프로그램
+## TDT Synapse 통합 버전 ⚙️
 
-### 개요
+문장 음성 이해 실험에 TDT(Tucker-Davis Technologies) 시스템을 통합한 고급 버전입니다. 신경생리학 실험에서 뇌 활동을 실시간으로 기록하면서 동시에 동기화된 오디오 자극을 제시할 때 사용됩니다.
 
-`experiments/basic_sound_experiment.py`는 음향 감지(Detection) 실험을 제공합니다.
+### 주요 기능
 
-**실험 절차:**
-1. 다양한 주파수의 음향 자극 제시
-2. 피험자의 감지 반응 수집
-3. 반응 시간 측정
-4. 결과를 CSV로 저장
-
-**주파수:** 440Hz, 660Hz, 880Hz
-
-### 실행 방법
-
-```bash
-python experiments/basic_sound_experiment.py
-```
-
-**GUI 입력:**
-- **Subject ID**: 피험자 아이디 (예: S001)
-- **Session**: 세션 번호 (기본값: 1)
-- **Number of Trials**: 시행 수 (기본값: 9)
-
-### 결과 해석
-
-생성되는 CSV 파일의 컬럼:
-
-| 컬럼 | 설명 |
+| 기능 | 설명 |
 |------|------|
-| trial_num | 시행 번호 |
-| frequency | 자극 주파수 (Hz) |
-| duration | 자극 지속 시간 (초) |
-| volume | 음량 (0~1) |
-| response_detected | 반응 감지 여부 (True/False) |
-| reaction_time | 반응 시간 (초) |
-| timestamp | 시간 정보 |
+| **TDT Synapse 연동** | RPC 연결을 통한 자동 Synapse 통신 |
+| **동기화 트리거** | 오디오 재생 시작/종료 시 트리거 신호 전송 |
+| **동적 트리거값** | `trg_table.xlsx`에서 오디오별 트리거값 동적 로드 |
+| **모니터 자동 감지** | 해상도 자동 감지 (3단계 fallback) |
+| **UI 동적 스케일링** | 모든 UI 요소 해상도에 맞게 자동 조정 |
+| **Flow 최적화** | 참가자 정보 → 윈도우 초기화 순서 개선 |
+| **Fixation Crosshair** | 시각적 주의 집중용 십자가 마크 |
+| **Fullscreen 모드** | 전체 화면 사용 (100% 해상도) |
 
-### 코드 예제: 기본 실험 커스터마이징
+### 설치 및 준비
 
-```python
-import sys
-sys.path.insert(0, 'experiments')
-from basic_sound_experiment import ExperimentConfig, SoundExperiment
-
-# 설정 수정
-config = ExperimentConfig()
-config.frequencies = [500, 1000, 2000]  # 다른 주파수
-config.duration = 0.5  # 음향 지속 시간 변경
-config.volume = 0.5  # 음량 증가
-config.num_trials = 15  # 시행 수 증가
-
-# 실험 실행
-experiment = SoundExperiment(config)
-experiment.run()
+**1단계: TDT 관련 패키지 설치**
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt  # pysynapse 포함
 ```
 
----
+**2단계: TDT 하드웨어 및 소프트웨어 설정**
+- RZ5 또는 RZ6 프로세서 연결
+- Synapse 소프트웨어 실행 (localhost:3333에서 대기)
+- RPC 서버 활성화 확인
 
-## 고급 실험
+**3단계: 트리거값 파일 준비 (`trg_table.xlsx`)**
 
-### 음향 판별 실험 (상향식 방법)
+프로젝트 루트에 `trg_table.xlsx` 파일 생성:
 
-`experiments/sound_discrimination.py`는 상향식 방법으로 주파수 역치를 추정합니다.
+```
+filename          | trigger val
+-----------------|-------------
+Sen_01.wav       | 10
+Sen_02.wav       | 20
+Sen_03.wav       | 30
+Sen_04.wav       | 40
+```
 
-**실험 방식:**
-- **기준음**: 처음 제시되는 음 (기준)
-- **비교음**: 변하는 음 (상향식으로 증가)
-- **피험자 과제**: 비교음이 기준음보다 높은지/낮은지 판단
-
-**역치 추정:**
-- 피험자의 반응이 바뀌는 지점 감지 (역전)
-- 마지막 역전들의 평균으로 역치 추정
+파일 위치: `/Users/yoonseoblim/Documents/Python_Program/psychopy_program/trg_table.xlsx`
 
 ### 실행 방법
 
+**기본 실행**
 ```bash
-python experiments/sound_discrimination.py
+python experiments/sentence_comprehension_TDT.py
 ```
 
-**결과:**
-- CSV 파일: 각 시행의 자극 주파수와 반응
-- PNG 그래프: 
-  - 시행별 주파수 변화
-  - 반응 분포
+**실행 순서:**
+1. 콘솔에서 참가자 정보 입력 (Subject ID, Session)
+2. 참가자 정보 검증 및 표시
+3. "Initializing PsychoPy screen..." 메시지
+4. 모니터 해상도 자동 감지 및 콘솔에 인쇄
+5. PsychoPy 윈도우 열기
+6. 실험 화면에 시작 메시지 표시
+7. 스페이스바 입력 대기
+8. 실험 시작
 
----
+### TDTSynapseManager 클래스
 
-## 유틸리티 사용법
+오디오 재생 시 자동으로 TDT 트리거를 전송하는 관리자 클래스:
 
-### 음향 자극 생성
-
-`sound_utilities.py`의 `ToneGenerator` 클래스 사용:
-
-#### 1. 순음(Pure Tone)
-
+**주요 메서드:**
 ```python
-from experiments.sound_utilities import ToneGenerator
-from psychopy import sound
+# TDT 연결
+manager = TDTSynapseManager(host='localhost', port=3333)
+manager.connect()  # 자동으로 호출됨
 
-# 440Hz 순음 생성
-waveform = ToneGenerator.pure_tone(frequency=440, duration=1.0, volume=0.3)
+# 트리거 신호 전송
+manager.send_trigger(trigger_value=10)  # 오디오 시작
+manager.send_trigger(trigger_value=0)   # 오디오 종료
 
-# PsychoPy Sound 객체로 변환
-psychopy_sound = sound.Sound(waveform, sampleRate=44100)
-psychopy_sound.play()
+# 연결 상태 확인
+if manager.is_connected():
+    print("TDT 연결됨")
 ```
 
-#### 2. 스윕음(Sweep Tone) - 주파수가 변하는 소리
+**연결 실패 시:**
+- pysynapse 미설치 → 경고 후 TDT 기능 비활성화
+- Synapse 미실행 → 경고 후 트리거 없이 실험 진행
+- **기본 실험은 정상 작동**
 
-```python
-# 200Hz에서 800Hz로 변하는 음
-waveform = ToneGenerator.sweep_tone(200, 800, duration=1.0)
+### 모니터 해상도 자동 감지
 
-psychopy_sound = sound.Sound(waveform, sampleRate=44100)
-psychopy_sound.play()
+실험 시작 시 자동으로 모니터 해상도를 감지합니다:
+
+**감지 순서 (Fallback):**
+```
+1. pyglet 라이브러리
+   ↓ (실패 시)
+2. screeninfo 라이브러리
+   ↓ (실패 시)
+3. macOS Quartz (macOS 전용)
+   ↓ (실패 시)
+4. 기본값: 1920x1080
 ```
 
-#### 3. 복합음(Complex Tone) - 여러 주파수 조합
-
-```python
-# 기본음(440Hz) + 배음들(880Hz, 1320Hz)
-waveform = ToneGenerator.complex_tone(
-    frequencies=[440, 880, 1320],
-    amplitudes=[0.5, 0.3, 0.2],
-    duration=1.0
-)
-
-psychopy_sound = sound.Sound(waveform, sampleRate=44100)
-psychopy_sound.play()
+**콘솔 출력 예시:**
+```
+Using pyglet backend
+Detected screen resolution: 2560x1440
+Scale factor: 1.20x (window will scale to 120% of reference size)
 ```
 
-#### 4. 백색/분홍색 소음
+### 동적 UI 스케일링
 
-```python
-# 백색 소음
-white_noise = ToneGenerator.white_noise(duration=1.0)
+모든 UI 요소가 감지된 해상도에 맞게 자동으로 스케일링됩니다:
 
-# 분홍색 소음 (더 자연스러움)
-pink_noise = ToneGenerator.pink_noise(duration=1.0)
+**기준 해상도: 1920x1080**
+- 텍스트 높이: `35 * scale`
+- 십자가 크기: `17 * scale`
+- Y 위치: `y * scale_y`
+- 텍스트 줄바꿈 너비: `screen_width * 90%`
 
-psychopy_sound = sound.Sound(white_noise, sampleRate=44100)
-psychopy_sound.play()
+**예시:**
+```
+감지 해상도: 2560x1440
+기준 해상도: 1920x1080
+Scale: min(2560/1920, 1440/1080) = 1.20
+
+텍스트 높이: 35 * 1.20 = 42
+십자가 크기: 17 * 1.20 = 20
 ```
 
-### 신호 처리
+### Fixation Crosshair
 
-`SoundProcessor` 클래스 사용:
+오디오 재생 중 시각적 주의 집중을 위해 십자가 마크가 표시됩니다:
 
-#### 1. Envelope 적용 (음성 시작/끝 부드럽게)
+**외형:**
+- 배경: 회색 (0.3, 0.3, 0.3) 또는 검은색
+- 십자가: 흰색 (1, 1, 1)
+- 구성: 수평선 + 수직선 + 중심점
+- 크기: 동적 스케일링 적용 (기본 17px)
 
+**코드:**
 ```python
-from experiments.sound_utilities import SoundProcessor, ToneGenerator
-
-# 순음 생성
-tone = ToneGenerator.pure_tone(440, 1.0)
-
-# Envelope 적용
-processed = SoundProcessor.apply_envelope(
-    tone,
-    envelope_type='linear',  # 'linear', 'exp', 'hann'
-    attack=0.1,    # 100ms 안내
-    release=0.2    # 200ms 종료
-)
+# 십자가 크기 커스터마이징
+crosshair_size = int(30 * scale)  # 17에서 30으로 변경
 ```
 
-#### 2. 필터 적용
+### 참가자 정보 수집 Flow
 
-```python
-# Low-pass filter: 1000Hz 이상 제거
-filtered = SoundProcessor.apply_filter(
-    tone,
-    filter_type='lowpass',
-    cutoff_freq=1000
-)
+새로운 최적화된 플로우:
 
-# Band-pass filter: 400-600Hz만 유지
-filtered = SoundProcessor.apply_filter(
-    tone,
-    filter_type='bandpass',
-    cutoff_freq=(400, 600)
-)
+**이전 (Traditional):**
+```
+윈도우 생성 → 참가자 정보 입력 (블로킹) → 실험 시작
 ```
 
-#### 3. 진폭 변조(Amplitude Modulation)
-
-```python
-# 5Hz로 진폭이 변하는 음
-modulated = SoundProcessor.apply_amplitude_modulation(
-    tone,
-    mod_frequency=5,
-    mod_depth=0.5
-)
+**현재 (Optimized):**
+```
+콘솔에서 참가자 정보 입력 (빠름) → 윈도우 생성 → 실험 시작
 ```
 
-### 신호 분석
+**장점:**
+- PsychoPy 윈도우가 미리 열리지 않음 (부자연스러움 제거)
+- 참가자 정보 입력이 터미널에서 진행 (더 빠름)
+- 윈도우가 준비되면 실험 화면 즉시 표시
 
-`SoundAnalyzer` 클래스 사용:
+### 문제 해결
 
-```python
-from experiments.sound_utilities import SoundAnalyzer
+**Q: TDT 연결 안 됨**
+```
+A: Synapse 소프트웨어가 실행 중인지 확인
+   host='localhost', port=3333 설정 확인
+   콘솔에 "TDT 연결 실패" 메시지 출력 → 일반 모드로 진행
+```
 
-tone = ToneGenerator.pure_tone(440, 1.0)
+**Q: 모니터 해상도 잘못 감지됨**
+```
+A: 콘솔에 감지된 해상도 확인
+   필요시 코드에서 수동으로 설정:
+   self.screen_width = 2560
+   self.screen_height = 1440
+```
 
-# 지배적 주파수 찾기
-dominant_freq = SoundAnalyzer.find_dominant_frequency(tone)
-print(f"주파수: {dominant_freq:.1f}Hz")
+**Q: 십자가가 너무 크거나 작음**
+```
+A: experiments/sentence_comprehension_TDT.py에서
+   crosshair_size = int(17 * self.scale)  # 17을 다른 값으로 변경
+```
 
-# 음량 계산 (dB)
-loudness = SoundAnalyzer.compute_loudness(tone)
-print(f"음량: {loudness:.1f}dB")
+**Q: pysynapse 설치 안 됨**
+```
+A: pip install --upgrade pysynapse>=0.0.3
+   또는 TDT 기능 없이 실험 진행 (자동으로 폴백)
+```
 
-# 스펙트럼 계산
-frequencies, power = SoundAnalyzer.compute_spectrum(tone)
+### 데이터 출력
 
-# 시각화
-SoundAnalyzer.plot_waveform(tone, title='Pure Tone 440Hz')
-SoundAnalyzer.plot_spectrum(tone, title='Power Spectrum')
+TDT 버전도 기본 버전과 동일한 데이터 형식:
+
+```
+trial_num        : 시행 번호
+total_trials     : 전체 시행 수
+left_file        : 좌측 음원 파일명
+right_file       : 우측 음원 파일명
+correct_answer   : 정답 (1-4)
+user_response    : 피험자 응답 (1-4)
+is_correct       : 정답 여부 (True/False)
+latency_sec      : 반응 시간 (초)
+timestamp        : 실험 시간 (ISO 형식)
+```
+
+**추가 정보 (콘솔 로그):**
+```
+Detected screen resolution: 2560x1440
+TDT 연결됨
+트리거값 테이블 로드됨 (25개 파일)
+Scale: 1.20x
 ```
 
 ---
@@ -524,88 +519,6 @@ plt.ylabel('감지율')
 plt.title('주파수별 감지율')
 plt.tight_layout()
 plt.show()
-```
-
----
-
-## 커스텀 실험 만들기
-
-### 예제: 진폭 차이 역치(Amplitude Discrimination Threshold) 실험
-
-```python
-from psychopy import visual, sound, event, core, gui, data
-import numpy as np
-from experiments.sound_utilities import ToneGenerator, SoundProcessor
-
-class AmplitudeDiscriminationExperiment:
-    def __init__(self):
-        self.window = visual.Window(size=(800, 600), color=[-1, -1, -1])
-        self.data = []
-    
-    def run_trial(self, reference_amplitude, test_amplitude):
-        """기준 진폭과 테스트 진폭 비교"""
-        
-        # 자극 생성
-        ref_tone = ToneGenerator.pure_tone(440, 0.5, volume=reference_amplitude)
-        test_tone = ToneGenerator.pure_tone(440, 0.5, volume=test_amplitude)
-        
-        # 자극 제시
-        ref = sound.Sound(ref_tone, sampleRate=44100)
-        test = sound.Sound(test_tone, sampleRate=44100)
-        
-        ref.play()
-        core.wait(0.5)
-        core.wait(0.3)  # ISI
-        test.play()
-        core.wait(0.5)
-        
-        # 반응 수집
-        instructions = visual.TextStim(
-            self.window,
-            text="두 번째 음이 더 크면 SPACE, 작으면 S를 누르세요",
-            color='white'
-        )
-        instructions.draw()
-        self.window.flip()
-        
-        event.clearEvents()
-        response = None
-        while response is None:
-            keys = event.getKeys(keyList=['space', 's'])
-            if 'space' in keys:
-                response = 'louder'
-            elif 's' in keys:
-                response = 'quieter'
-            core.wait(0.01)
-        
-        return {
-            'reference_amplitude': reference_amplitude,
-            'test_amplitude': test_amplitude,
-            'response': response
-        }
-    
-    def run(self, num_trials=20):
-        """실험 실행"""
-        ref_amp = 0.3
-        
-        for trial in range(num_trials):
-            # 상향식: 약간 다른 진폭부터 시작
-            test_amp = ref_amp + (trial * 0.02)
-            
-            result = self.run_trial(ref_amp, test_amp)
-            self.data.append(result)
-        
-        self.window.close()
-        
-        # 데이터 저장
-        import pandas as pd
-        df = pd.DataFrame(self.data)
-        df.to_csv('data/amplitude_discrimination.csv', index=False)
-
-# 실험 실행
-if __name__ == '__main__':
-    exp = AmplitudeDiscriminationExperiment()
-    exp.run()
 ```
 
 ---

@@ -1,0 +1,6 @@
+trial_num,total_trials,left_file,right_file,correct_answer,user_response,is_correct,latency_sec,timestamp
+1,5,Sen_04.wav,Sen_03.wav,4,4,True,5.035383208305575,2026-02-08T16:38:16.339581
+2,5,Sen_07.wav,Sen_05.wav,3,3,True,2.150609333330067,2026-02-08T16:38:24.322684
+3,5,Sen_06.wav,Sen_08.wav,2,2,True,3.349282791663427,2026-02-08T16:38:34.813996
+4,5,Sen_01.wav,Sen_02.wav,2,2,True,1.5741267499979585,2026-02-08T16:38:43.039579
+5,5,Sen_09.wav,Sen_10.wav,3,3,True,1.6603603749827016,2026-02-08T16:38:50.390821
