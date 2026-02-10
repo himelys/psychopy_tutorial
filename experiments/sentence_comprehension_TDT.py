@@ -58,14 +58,10 @@ except ImportError:
 class TDTSynapseManager:
     """Manages communication with TDT Synapse via tdt package (SynapseAPI)."""
     
-    def __init__(self, gizmo_name='Experiment'):
+    def __init__(self):
         """Initialize TDT Synapse connection."""
         self.synapse = None
         self.connected = False
-        # Synapse requires GizmoName and ParameterName
-        self.gizmo_name = gizmo_name
-        self.parameter_name = 'AudioTrigger'
-        
         self._connect()
     
     def _connect(self):
@@ -74,16 +70,73 @@ class TDTSynapseManager:
             print("⚠ TDT connection not available (tdt package not installed)")
             return
         
+        print("=========== Setting Configuration ===========")
         try:
             # Connect to local Synapse API
             self.synapse = tdt.SynapseAPI()
             self.connected = True
-            print(f"✓ Connected to TDT Synapse API")
+            print("1. TDT Synapse connection successful")
         except Exception as e:
-            print(f"⚠ Failed to connect to TDT Synapse API: {e}")
+            print(f"TDT Synapse connection failed: {e}")
             print(f"  Make sure Synapse application is running.")
-            self.connected = False
+            # Abort experiment if TDT connection fails
+            core.quit()
     
+    def configure(self, subject_id, session):
+        """Configure TDT Tank, Block, and start recording."""
+        if not self.connected or self.synapse is None:
+            return
+
+        try:
+            print("=========== TDT Configuration ===========")
+            # 1. Switch to Idle mode first
+            if self.synapse.getMode() != 0:
+                self.synapse.setMode(0)
+            
+            # 2. Set User & Experiment
+            user = "Psychopy"
+            experiment = "SentenceComp"
+            
+            self.synapse.setCurrentUser(user)
+            print(f"2. Setting user ({user}) done")
+            self.synapse.setCurrentExperiment(experiment)
+            print(f"3. Setting experiment ({experiment}) done")
+            
+            # 3. Tank Check
+            current_tank = self.synapse.getCurrentTank()
+            print(f"4. Tank setup ({current_tank}) done")
+            
+            # 4. Set Subject
+            # createSubject(name, date_str, type)
+            self.synapse.createSubject(subject_id, f'Session_{session}', 'Human')
+            self.synapse.setCurrentSubject(subject_id)
+            current_subject = self.synapse.getCurrentSubject()
+            print(f"5. Subject setup ({current_subject}) done")
+            
+            # 5. Set Block
+            clean_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
+            block_name = f"{subject_id}_S{session}_{clean_datetime}"
+            self.synapse.setCurrentBlock(block_name)
+            print(f"6. Block setup ({block_name}) done")
+            
+            # 6. Record Mode
+            self.synapse.setMode(3)
+            print("7. TDT Recording mode started")
+            print("=========== TDT Configuration Done ===========")
+            
+        except Exception as e:
+            print(f"⚠ TDT Configuration failed: {e}")
+            core.quit()
+
+    def stop_recording(self):
+        """Stop TDT recording (switch to Idle)."""
+        if self.connected and self.synapse:
+            try:
+                self.synapse.setMode(0)
+                print("✓ TDT switched to Idle mode - Recording stopped")
+            except Exception as e:
+                print(f"⚠ Error stopping TDT recording: {e}")
+
     def send_trigger(self, trigger_value):
         """Send trigger signal to TDT system.
         
@@ -94,9 +147,15 @@ class TDTSynapseManager:
             return False
         
         try:
-            # Use setParameterValue(Gizmo, Parameter, Value)
-            self.synapse.setParameterValue(self.gizmo_name, self.parameter_name, int(trigger_value))
-            print(f"✓ Trigger sent: {self.gizmo_name}.{self.parameter_name} = {trigger_value}")
+            # Trigger sequence based on tutorial
+            self.synapse.setParameterValue('TTL2Int1', 'IntegerValue', int(trigger_value))
+            self.synapse.setParameterValue('TTL2Int1', 'ManualTrigger', 1)
+            core.wait(0.01)
+            self.synapse.setParameterValue('TTL2Int1', 'ManualTrigger', 0)
+            
+            print("=============================================")
+            print(f"✓ Trigger sent: {trigger_value}")
+            print("=============================================")
             return True
         except Exception as e:
             print(f"⚠ Failed to send trigger: {e}")
@@ -105,6 +164,7 @@ class TDTSynapseManager:
     def close(self):
         """Close Synapse connection."""
         if self.synapse is not None:
+            self.stop_recording()
             try:
                 self.synapse = None
                 print("✓ Synapse connection closed")
@@ -115,7 +175,7 @@ class TDTSynapseManager:
 class SentenceComprehensionExperimentTDT:
     """Sentence comprehension experiment with spatial audio and TDT integration."""
     
-    def __init__(self, use_tdt=True, tdt_ip='localhost', tdt_port=3333):
+    def __init__(self, use_tdt=True):
         """Initialize experiment (window will be created after participant info is collected)."""
         # Initialize window as None (will be created in run() after collecting participant info)
         self.window = None
@@ -139,8 +199,6 @@ class SentenceComprehensionExperimentTDT:
         
         # Store TDT settings
         self.use_tdt = use_tdt
-        self.tdt_ip = tdt_ip
-        self.tdt_port = tdt_port
         self.tdt_manager = None
         
         # Load quiz data before window is created
@@ -149,7 +207,7 @@ class SentenceComprehensionExperimentTDT:
         # Get available audio files
         self._get_audio_files()
     
-    def _initialize_window(self):
+    def _initialize_window(self, subject_id=None, session=None):
         """Initialize PsychoPy window and TDT connection."""
         # Detect screen resolution
         self.screen_width, self.screen_height = self._detect_screen_resolution()
@@ -182,6 +240,8 @@ class SentenceComprehensionExperimentTDT:
         # Initialize TDT connection if requested
         if self.use_tdt and TDT_AVAILABLE:
             self.tdt_manager = TDTSynapseManager()
+            if subject_id is not None:
+                self.tdt_manager.configure(subject_id, session)
         elif self.use_tdt and not TDT_AVAILABLE:
             self.show_message(
                 "⚠ TDT requested but tdt package not available\nContinuing without TDT",
@@ -693,7 +753,7 @@ class SentenceComprehensionExperimentTDT:
         
         # NOW initialize the window and TDT after participant info is collected
         print("PsychoPy 화면 초기화 중...")
-        self._initialize_window()
+        self._initialize_window(subject_id, session)
         print("✓ PsychoPy 화면 준비 완료\n")
         
         # Show experiment screen ready message
