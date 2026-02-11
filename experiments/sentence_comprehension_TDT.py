@@ -187,6 +187,7 @@ class SentenceComprehensionExperimentTDT:
         
         self.clock = None
         self.data_list = []
+        self.data_filename = None
         self.used_files = set()
         self.quiz_data = {}
         self.audio_files = []
@@ -288,10 +289,10 @@ class SentenceComprehensionExperimentTDT:
                 
                 # Final fallback for macOS using Quartz
                 try:
-                    from Quartz import CGDisplayBounds
-                    main_display_id = CGDisplayBounds(0)
-                    width = int(main_display_id.size.width)
-                    height = int(main_display_id.size.height)
+                    from Quartz import CGDisplayBounds, CGMainDisplayID
+                    bounds = CGDisplayBounds(CGMainDisplayID())
+                    width = int(bounds.size.width)
+                    height = int(bounds.size.height)
                     print(f"✓ Using Quartz to detect resolution: {width}x{height}")
                     return width, height
                 except Exception as e3:
@@ -316,7 +317,9 @@ class SentenceComprehensionExperimentTDT:
                 }
             print(f"✓ Loaded {len(self.quiz_data)} quiz items with answers")
         except Exception as e:
-            self.show_message(f"✗ Error loading quiz.xlsx: {str(e)}", color=[1, 0, 0])
+            print(f"✗ Error loading quiz.xlsx: {str(e)}")
+            if self.window is not None:
+                self.show_message(f"✗ Error loading quiz.xlsx: {str(e)}", color=[1, 0, 0])
             core.quit()
     
     def _load_trigger_table(self):
@@ -339,10 +342,10 @@ class SentenceComprehensionExperimentTDT:
         """Get list of available audio files from stimuli folder."""
         if not os.path.exists(self.stimuli_dir):
             os.makedirs(self.stimuli_dir)
-            self.show_message(
-                f"✗ Stimuli folder is empty.\nPlace .wav files in '{self.stimuli_dir}/' folder",
-                color=[1, 0, 0]
-            )
+            error_msg = f"✗ Stimuli folder is empty.\nPlace .wav files in '{self.stimuli_dir}/' folder"
+            print(error_msg)
+            if self.window is not None:
+                self.show_message(error_msg, color=[1, 0, 0])
             core.quit()
         
         # Get all .wav and .mp3 files
@@ -352,10 +355,10 @@ class SentenceComprehensionExperimentTDT:
         ]
         
         if len(self.audio_files) < 2:
-            self.show_message(
-                f"✗ Not enough audio files.\nFound {len(self.audio_files)}, need at least 2",
-                color=[1, 0, 0]
-            )
+            error_msg = f"✗ Not enough audio files.\nFound {len(self.audio_files)}, need at least 2"
+            print(error_msg)
+            if self.window is not None:
+                self.show_message(error_msg, color=[1, 0, 0])
             core.quit()
         
         random.shuffle(self.audio_files)
@@ -376,6 +379,11 @@ class SentenceComprehensionExperimentTDT:
     
     def show_message(self, message, color=None, duration=None, wait_key=None):
         """Display a message on screen with dynamic scaling."""
+        if self.window is None or self.clock is None or self.scale is None:
+            # Window not initialized yet (startup validation path)
+            print(message)
+            return
+
         if color is None:
             color = [1, 1, 1]
         
@@ -815,17 +823,27 @@ class SentenceComprehensionExperimentTDT:
                 self.window.close()
     
     def save_data(self, subject_id, session):
-        """Save experimental data to CSV."""
+        """Append latest trial data to a session CSV file."""
         if not self.data_list:
             print("✗ No data to save")
             return
-        
-        df = pd.DataFrame(self.data_list)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = os.path.join(self.data_dir, f"{subject_id}_session{session}_{timestamp}.csv")
-        
-        df.to_csv(filename, index=False)
-        print(f"✓ Data saved: {filename}")
+
+        # Create one file per run and append one trial row each time.
+        if self.data_filename is None:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.data_filename = os.path.join(
+                self.data_dir, f"{subject_id}_session{session}_{timestamp}.csv"
+            )
+
+        latest_trial_df = pd.DataFrame([self.data_list[-1]])
+        write_header = not os.path.exists(self.data_filename)
+        latest_trial_df.to_csv(
+            self.data_filename,
+            mode='a',
+            header=write_header,
+            index=False
+        )
+        print(f"✓ Trial data appended: {self.data_filename}")
     
     def plot_results(self):
         """Plot experimental results."""
