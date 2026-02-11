@@ -23,8 +23,19 @@ import subprocess
 from datetime import datetime
 import numpy as np
 import pandas as pd
+import soundfile as sf
 
-from psychopy import visual, core, event, data, gui, sound, logging, prefs
+try:
+    import sounddevice as sd
+except Exception:
+    sd = None
+
+# Configure audio backend before importing psychopy.sound
+from psychopy import prefs
+prefs.hardware['audioLib'] = ['pygame']
+prefs.hardware['audioLatencyMode'] = 3
+
+from psychopy import visual, core, event, data, gui, sound, logging
 from psychopy.hardware import keyboard
 
 # TDT Integration
@@ -90,6 +101,29 @@ class TDTManager:
             print(f"⚠ Trigger Error: {e}")
 
 
+class SimpleSoundFallback:
+    """Fallback sound player when PsychoPy sound backends are unavailable."""
+    def __init__(self):
+        self._path = None
+        self._duration = 0.0
+        self._audio = None
+        self._sr = None
+
+    def setSound(self, path):
+        self._path = path
+        self._audio, self._sr = sf.read(path, dtype='float32')
+        if self._audio.ndim > 1 and self._audio.shape[1] == 1:
+            self._audio = self._audio[:, 0]
+        self._duration = len(self._audio) / float(self._sr)
+
+    def play(self):
+        if sd is not None and self._audio is not None and self._sr is not None:
+            sd.play(self._audio, self._sr, blocking=False)
+
+    def getDuration(self):
+        return self._duration
+
+
 class TutorialExperiment:
     """Main experiment class handling window, stimuli, and flow."""
     
@@ -106,8 +140,19 @@ class TutorialExperiment:
         self.keyboard = keyboard.Keyboard()
         
         # 3. Setup Audio
-        prefs.hardware['audioLib'] = 'pygame'
-        self.sound = sound.Sound('A', secs=-1, stereo=True)
+        # PsychoPy 2025+ selects backend via sound.Sound.backend
+        self.sound = None
+        for backend_name in ['ptb', 'pygame', 'pysound']:
+            try:
+                sound.Sound.backend = backend_name
+                self.sound = sound.Sound('A', secs=-1, stereo=True)
+                print(f"✓ Audio backend selected: {backend_name}")
+                break
+            except Exception:
+                continue
+        if self.sound is None:
+            print("⚠ No PsychoPy sound backend available. Using fallback audio player.")
+            self.sound = SimpleSoundFallback()
         
         # 4. Setup TDT
         self.tdt = TDTManager()
@@ -121,6 +166,35 @@ class TutorialExperiment:
         
         # Paths
         self.root_dir = os.path.dirname(os.path.abspath(__file__))
+
+    def _resolve_stim_path(self, sound_file, cond_file):
+        """Resolve sound path from condition row robustly."""
+        if os.path.isabs(sound_file):
+            return sound_file
+
+        # 1) Relative to condition file directory (matches Builder-like behavior)
+        cond_dir = os.path.dirname(cond_file)
+        cand = os.path.normpath(os.path.join(cond_dir, sound_file))
+        if os.path.exists(cand):
+            return cand
+
+        # 2) Relative to tutorial root directory
+        return os.path.normpath(os.path.join(self.root_dir, sound_file))
+
+    @staticmethod
+    def _normalize_numeric_key(key_name):
+        """Normalize numpad keys to single-digit keys."""
+        return key_name.replace('num_', '') if key_name else key_name
+
+    @staticmethod
+    def _normalize_answer(ans):
+        """Normalize answer value from condition files (e.g., 1, 1.0, 'num_1')."""
+        if ans is None:
+            return None
+        text = str(ans).strip()
+        if text.endswith('.0'):
+            text = text[:-2]
+        return text.replace('num_', '')
 
     def show_dialog(self):
         """Show participant info dialog."""
@@ -213,7 +287,8 @@ class TutorialExperiment:
         imp_path = "C:/Users/KIST/Desktop/임피던스체커 패키지/check_realtime_imp.exe"
         proc = None
         if os.path.exists(imp_path):
-            self.win.winHandle.minimize()
+            if hasattr(self.win, 'winHandle') and hasattr(self.win.winHandle, 'minimize'):
+                self.win.winHandle.minimize()
             try:
                 proc = subprocess.Popen([imp_path])
                 print("Launched Impedance Checker")
@@ -225,9 +300,14 @@ class TutorialExperiment:
         
         # Cleanup
         if proc:
-            subprocess.call(['taskkill', '/F', '/T', '/PID', str(proc.pid)])
-        self.win.winHandle.activate()
-        self.win.winHandle.maximize()
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(proc.pid)])
+            else:
+                proc.terminate()
+        if hasattr(self.win, 'winHandle') and hasattr(self.win.winHandle, 'activate'):
+            self.win.winHandle.activate()
+        if hasattr(self.win, 'winHandle') and hasattr(self.win.winHandle, 'maximize'):
+            self.win.winHandle.maximize()
         
         self.tdt.send_trigger(9001)  # GELLING_END
         
@@ -252,11 +332,12 @@ class TutorialExperiment:
             trig_id = int(trial['trigger_id'])
             sound_file = trial['fname']
             isi = float(trial['isi']) if 'isi' in trial else 1.0
+            sound_path = self._resolve_stim_path(sound_file, cond_file)
             
             self.tdt.send_trigger(trig_id)
             
             # Play sound
-            self.sound.setSound(sound_file)
+            self.sound.setSound(sound_path)
             self.sound.play()
             
             # Show fixation during sound
@@ -284,12 +365,13 @@ class TutorialExperiment:
         for trial in trials:
             trig_id = int(trial['trigger_id'])
             sound_file = trial['fname']
-            ans = str(trial['ans'])
+            ans = self._normalize_answer(trial['ans'])
             quiz_content = trial['quiz_content']
+            sound_path = self._resolve_stim_path(sound_file, cond_file)
             
             # 1. Stimulus
             self.tdt.send_trigger(trig_id)
-            self.sound.setSound(sound_file)
+            self.sound.setSound(sound_path)
             self.sound.play()
             self.present_routine(text='+', duration=self.sound.getDuration())
             
@@ -297,10 +379,13 @@ class TutorialExperiment:
             quiz_trig = trig_id + 1000
             self.tdt.send_trigger(quiz_trig)
             
-            keys = self.present_routine(text=quiz_content, key_list=['1','2','3','4'])
+            keys = self.present_routine(
+                text=quiz_content,
+                key_list=['1', '2', '3', '4', 'num_1', 'num_2', 'num_3', 'num_4']
+            )
             
             # Check Answer
-            resp = keys[0].name if keys else None
+            resp = self._normalize_numeric_key(keys[0].name) if keys else None
             corr = 1 if resp == ans else 0
             
             # Feedback Trigger
