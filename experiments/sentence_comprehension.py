@@ -47,6 +47,7 @@ class SentenceComprehensionExperiment:
         self.window = visual.Window(size=(1200, 800), color=[-1, -1, -1], units='pix')
         self.clock = core.Clock()
         self.data_list = []
+        self.data_filename = None
         self.used_files = set()
         self.quiz_data = {}
         self.audio_files = []
@@ -444,17 +445,26 @@ class SentenceComprehensionExperiment:
             self.window.close()
     
     def save_data(self, subject_id, session):
-        """Save experimental data to CSV."""
+        """Append the latest trial row to a single session CSV."""
         if not self.data_list:
             print("✗ No data to save")
             return
-        
-        df = pd.DataFrame(self.data_list)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = os.path.join(self.data_dir, f"{subject_id}_session{session}_{timestamp}.csv")
-        
-        df.to_csv(filename, index=False)
-        print(f"✓ Data saved: {filename}")
+
+        if self.data_filename is None:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.data_filename = os.path.join(
+                self.data_dir, f"{subject_id}_session{session}_{timestamp}.csv"
+            )
+
+        latest_trial_df = pd.DataFrame([self.data_list[-1]])
+        write_header = not os.path.exists(self.data_filename)
+        latest_trial_df.to_csv(
+            self.data_filename,
+            mode='a',
+            header=write_header,
+            index=False
+        )
+        print(f"✓ Trial data appended: {self.data_filename}")
     
     def plot_results(self):
         """Plot experimental results."""

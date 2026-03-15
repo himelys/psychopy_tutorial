@@ -38,6 +38,26 @@ prefs.hardware['audioLatencyMode'] = 3
 from psychopy import visual, core, event, data, gui, sound, logging
 from psychopy.hardware import keyboard
 
+
+def _detect_resource_dir():
+    """Return directory containing bundled runtime resources."""
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        bundle_dir = getattr(sys, '_MEIPASS', exe_dir)
+        for cand in [exe_dir, bundle_dir]:
+            if os.path.exists(os.path.join(cand, 'erp_stimuli')) and os.path.exists(os.path.join(cand, 'main_stimuli')):
+                return cand
+        return bundle_dir
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _detect_output_dir():
+    """Return writable directory for experiment output files."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 # TDT Integration
 try:
     import tdt
@@ -165,7 +185,8 @@ class TutorialExperiment:
         self.this_exp = None
         
         # Paths
-        self.root_dir = os.path.dirname(os.path.abspath(__file__))
+        self.resource_dir = _detect_resource_dir()
+        self.output_dir = _detect_output_dir()
 
     def _resolve_stim_path(self, sound_file, cond_file):
         """Resolve sound path from condition row robustly."""
@@ -179,7 +200,7 @@ class TutorialExperiment:
             return cand
 
         # 2) Relative to tutorial root directory
-        return os.path.normpath(os.path.join(self.root_dir, sound_file))
+        return os.path.normpath(os.path.join(self.resource_dir, sound_file))
 
     @staticmethod
     def _normalize_numeric_key(key_name):
@@ -203,7 +224,7 @@ class TutorialExperiment:
             core.quit()
         
         # Setup Data Saving
-        data_dir = os.path.join(self.root_dir, 'data')
+        data_dir = os.path.join(self.output_dir, 'data')
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
             
@@ -283,10 +304,14 @@ class TutorialExperiment:
         msg = "(If gelling is finished and you are willing to proceed, please press '9'.)"
         
         # Launch Impedance Checker
-        # Windows 환경 설정: 임피던스 체커 경로 (실제 경로 확인 필요)
-        imp_path = "C:/Users/KIST/Desktop/임피던스체커 패키지/check_realtime_imp.exe"
+        # Prefer bundled tool path; fallback to legacy absolute path.
+        imp_candidates = [
+            os.path.join(self.resource_dir, 'tools', 'check_realtime_imp.exe'),
+            "C:/Users/KIST/Desktop/임피던스체커 패키지/check_realtime_imp.exe",
+        ]
+        imp_path = next((p for p in imp_candidates if os.path.exists(p)), None)
         proc = None
-        if os.path.exists(imp_path):
+        if imp_path is not None:
             if hasattr(self.win, 'winHandle') and hasattr(self.win.winHandle, 'minimize'):
                 self.win.winHandle.minimize()
             try:
@@ -320,7 +345,7 @@ class TutorialExperiment:
         self.present_routine(text="ERP session starts.\nPress '0' to continue.", key_list=['0'], trigger=8000)
         
         # Load Conditions
-        cond_file = os.path.join(self.root_dir, 'erp_stimuli', 'erp_stimuli.csv')
+        cond_file = os.path.join(self.resource_dir, 'erp_stimuli', 'erp_stimuli.csv')
         if not os.path.exists(cond_file):
             print(f"Error: {cond_file} not found.")
             return
@@ -356,7 +381,7 @@ class TutorialExperiment:
         """Main Block Loop with Quiz."""
         self.present_routine(text="Main session starts.\nPress '0'.", key_list=['0'], trigger=0)
         
-        cond_file = os.path.join(self.root_dir, 'main_stimuli', 'main_stimuli.csv')
+        cond_file = os.path.join(self.resource_dir, 'main_stimuli', 'main_stimuli.csv')
         if not os.path.exists(cond_file):
             return
             
